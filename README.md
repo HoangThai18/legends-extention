@@ -18,7 +18,8 @@ Trong thời đại AI phát triển từng ngày, **học tập** là cách t�
   | Bấm rồi thả riêng phím **Shift** | Chuyển tab hiện tại sang ChatGPT |
 
   Các tổ hợp phím như `Ctrl+C`, `Ctrl+V` hay `Shift+A` vẫn dùng bình thường. Đang gõ trong ô nhập liệu thì phím tắt không chạy, tránh bấm nhầm.
-- **Tab mồi & khôi phục:** đóng tab bằng phím tắt sẽ mở ngay một trang mồi (mặc định Google Docs). Muốn mở lại các tab vừa đóng, bấm **↺ Khôi phục tab vừa đóng** trong popup.
+- **Tab mồi & khôi phục:** đóng tab bằng phím tắt sẽ mở ngay một trang mồi (mặc định Google Docs). Popup nhớ 10 lần đóng gần nhất: bấm **↺ Mở lại N tab** để mở cả lần, hoặc bấm từng tab để mở riêng. Danh sách tự mất khi tắt trình duyệt.
+- **Dọn lịch sử:** trang ngụy trang tự bị xoá khỏi lịch sử duyệt web của Chrome ngay khi mở. Lịch sử cũ (trước khi cài, hoặc khi đang tắt tuỳ chọn) dọn bằng nút **🧹 Xoá lịch sử** trong popup. Nếu tắt tuỳ chọn này, lịch sử vẫn ghi tiêu đề ngụy trang chứ không ghi tiêu đề thật (trừ rule dùng `{title}` hoặc bỏ trống tiêu đề).
 - **Tự tắt tiếng:** tab ngụy trang tự tắt tiếng khi chuyển sang tab khác, bật lại khi quay về. Tab bạn tự tắt tiếng thì giữ nguyên.
 
 ## Cài đặt
@@ -68,6 +69,7 @@ Cuối `config.js` còn vài tuỳ chọn khác:
 | `SWITCH_URL` | Trang chuyển tới khi thả riêng phím Shift | `https://chatgpt.com/` |
 | `DECOY_URL` | Trang mồi mở ra khi đóng tab bằng phím tắt. Bỏ trống = không mở | Google Docs |
 | `AUTO_MUTE` | Tự tắt tiếng tab ngụy trang khi chuyển sang tab khác | `true` |
+| `CLEAN_HISTORY` | Tự xoá trang ngụy trang khỏi lịch sử duyệt web của Chrome | `true` |
 
 ### Icon có sẵn
 
@@ -96,7 +98,8 @@ Muốn thêm icon, chép file `.png`, `.ico` hoặc `.svg` vào `icons/` rồi g
 ├── background/
 │   ├── tab-closer.js     # Đóng tab thuộc cấu hình, mở tab mồi
 │   ├── closed-tabs.js    # Nhớ và khôi phục tab vừa đóng
-│   └── auto-mute.js      # Tự tắt/bật tiếng tab
+│   ├── auto-mute.js      # Tự tắt/bật tiếng tab
+│   └── history-cleaner.js # Xoá trang ngụy trang khỏi lịch sử Chrome
 ├── ui/
 │   ├── style.css       # CSS dùng chung
 │   └── page-popup/     # Bấm icon extension: ngụy trang nhanh + quản lý rule (lưu trong chrome.storage.local)

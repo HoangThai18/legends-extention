@@ -37,3 +37,5 @@ const SWITCH_URL = "https://chatgpt.com/";
 const DECOY_URL = "https://docs.google.com/document/u/0/";
 // Tắt tiếng tab ngụy trang khi chuyển sang tab khác
 const AUTO_MUTE = true;
+// Tự xoá trang ngụy trang khỏi lịch sử duyệt web của Chrome
+const CLEAN_HISTORY = true;

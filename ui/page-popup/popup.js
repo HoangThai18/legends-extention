@@ -77,11 +77,59 @@ Promise.all([getRules(), chrome.tabs.query({ active: true, currentWindow: true }
   };
 });
 
-// Khôi phục các tab vừa bị đóng bằng phím tắt
-const restore = document.getElementById("restore");
-chrome.runtime.sendMessage({ type: "closedCount" }).then((count) => {
-  if (!count) return;
-  restore.textContent = `↺ Khôi phục ${count} tab vừa đóng`;
-  restore.hidden = false;
-  restore.onclick = () => chrome.runtime.sendMessage({ type: "restoreClosed" }).then(() => window.close());
-});
+// Các lần đóng tab bằng phím tắt: mở lại cả lần hoặc từng tab
+const closed = document.getElementById("closed");
+const closedList = closed.querySelector("ol");
+const send = (msg) => chrome.runtime.sendMessage(msg);
+
+function timeAgo(time) {
+  const min = Math.floor((Date.now() - time) / 60000);
+  if (min < 1) return "vừa xong";
+  if (min < 60) return `${min} phút trước`;
+  return `${Math.floor(min / 60)} giờ trước`;
+}
+
+function renderClosed(batches) {
+  closed.hidden = !batches?.length;
+  if (closed.hidden) return;
+  closedList.replaceChildren(
+    ...batches.map((batch, b) => {
+      const li = document.createElement("li");
+      const head = document.createElement("button");
+      head.className = "batch";
+      head.textContent = `↺ Mở lại ${batch.tabs.length} tab · ${timeAgo(batch.time)}`;
+      head.onclick = () => send({ type: "restoreClosed", batch: b }).then(() => window.close());
+      const tabs = document.createElement("ul");
+      tabs.append(
+        ...batch.tabs.map((tab, t) => {
+          const item = document.createElement("li");
+          const open = document.createElement("button");
+          open.title = tab.url;
+          const title = document.createElement("span");
+          title.textContent = tab.title || tab.url;
+          const host = document.createElement("small");
+          host.textContent = URL.parse(tab.url)?.hostname || "";
+          open.append(title, host);
+          open.onclick = () => send({ type: "restoreClosed", batch: b, tab: t }).then(loadClosed);
+          item.append(open);
+          return item;
+        })
+      );
+      li.append(head, tabs);
+      return li;
+    })
+  );
+}
+
+const loadClosed = () => send({ type: "closedList" }).then(renderClosed);
+loadClosed();
+document.getElementById("clear-closed").onclick = () => send({ type: "clearClosed" }).then(loadClosed);
+
+// Quét lịch sử Chrome, xoá mọi URL khớp rule
+const purge = document.getElementById("purge-history");
+purge.onclick = () => {
+  purge.disabled = true;
+  send({ type: "purgeHistory" }).then((count) => {
+    purge.textContent = count ? `✓ Đã xoá ${count} mục khỏi lịch sử` : "✓ Lịch sử đã sạch";
+  });
+};

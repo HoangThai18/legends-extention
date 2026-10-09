@@ -16,7 +16,14 @@
   <tbody></tbody>
 </table>
 <button id="add">+ Thêm rule</button>
-<button id="restore" hidden></button>
+<section id="closed" hidden>
+  <header>
+    <h2>Tab vừa đóng</h2>
+    <button id="clear-closed" class="link">Xoá danh sách</button>
+  </header>
+  <ol></ol>
+</section>
+<button id="purge-history">🧹 Xoá lịch sử duyệt web của các trang ngụy trang</button>
 <div id="icons" popover>
   <button value="icons/google-docs.ico"><img src="../../icons/google-docs.ico" alt="">Google Docs</button>
   <button value="icons/google-sheets.ico"><img src="../../icons/google-sheets.ico" alt="">Google Sheets</button>

@@ -3,7 +3,8 @@ importScripts(
   "rules.js",
   "background/closed-tabs.js",
   "background/tab-closer.js",
-  "background/auto-mute.js"
+  "background/auto-mute.js",
+  "background/history-cleaner.js"
 );
 
 let rules = RULES;
@@ -13,12 +14,15 @@ const isTarget = (url) => findRule(rules, url) !== null;
 const closedTabs = createClosedTabs();
 const tabCloser = createTabCloser({ isTarget, getDecoyUrl: () => DECOY_URL, closedTabs });
 const autoMute = createAutoMute({ isTarget, isEnabled: () => AUTO_MUTE });
+const historyCleaner = createHistoryCleaner({ isTarget, isEnabled: () => CLEAN_HISTORY });
 
 // Tin nhắn từ content script / popup: thêm loại mới chỉ cần thêm một dòng ở đây
 const HANDLERS = {
   closeAll: (msg, sender) => tabCloser.closeAll(sender.tab),
-  closedCount: () => closedTabs.count(),
-  restoreClosed: () => closedTabs.restore()
+  closedList: () => closedTabs.list(),
+  restoreClosed: (msg) => closedTabs.restore(msg.batch, msg.tab),
+  clearClosed: () => closedTabs.clear(),
+  purgeHistory: () => historyCleaner.purge()
 };
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -38,3 +42,4 @@ chrome.storage.onChanged.addListener((changes) => {
 
 ready.then(autoMute.refresh);
 autoMute.start();
+historyCleaner.start();
