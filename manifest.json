@@ -5,7 +5,8 @@
   "description": "Học tập vì một tương lai tươi sáng",
   "permissions": [
     "tabs",
-    "storage"
+    "storage",
+    "history"
   ],
   "content_scripts": [
     {
