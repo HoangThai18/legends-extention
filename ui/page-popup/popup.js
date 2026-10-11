@@ -147,6 +147,7 @@ function showRules() {
   lockForm.hidden = true;
   rulesView.hidden = false;
   render();
+  showOpenTabs();
   lock.hasPin().then((has) => {
     document.getElementById("lock-now").textContent = has ? "🔒 Khoá" : "Ẩn danh sách";
     document.getElementById("set-pin").textContent = has ? "Đổi mã PIN" : "Đặt mã PIN";
@@ -158,6 +159,7 @@ function showRules() {
 function showForm({ hint, submit, input = true, back = false, action }) {
   rulesView.hidden = true;
   render();
+  showOpenTabs();
   lockForm.hidden = false;
   lockHint.textContent = hint;
   lockSubmit.textContent = submit;
@@ -228,7 +230,79 @@ forgot.onclick = () => {
   forgot.textContent = "Bấm lần nữa để xoá mã PIN, toàn bộ rule và video yêu thích";
 };
 
-// Khôi phục các tab vừa bị đóng bằng phím tắt
+// Số phút không dùng trước khi tự đóng tab, background đọc lại ngay khi lưu
+const autoCloseInput = document.getElementById("auto-close-minutes");
+chrome.storage.local
+  .get({ autoCloseMinutes: AUTO_CLOSE_AFTER_MINUTES })
+  .then((s) => (autoCloseInput.value = s.autoCloseMinutes));
+autoCloseInput.onchange = () => {
+  const minutes = Math.max(0, Math.round(Number(autoCloseInput.value)) || 0);
+  autoCloseInput.value = minutes;
+  chrome.storage.local.set({ autoCloseMinutes: minutes }).then(showOpenTabs);
+};
+
+// Danh sách tab đang ngụy trang: hỏi background mỗi giây xem tab nào đang dùng, tab nào đang đếm và còn bao lâu thì đóng
+const openTabs = document.getElementById("open-tabs");
+const openTabRow = document.getElementById("open-tab").content.firstElementChild;
+const openTabRows = new Map();
+const OPEN_TAB_TEXT = { active: "Đang dùng", idle: "Không hoạt động, sẽ đóng sau", off: "Đang tắt tự đóng" };
+const calm = matchMedia("(prefers-reduced-motion: reduce)");
+// Chữ mới trồi lên. `from` = độ mờ lúc bắt đầu: số đếm nhảy mỗi giây nên chỉ mờ nhẹ cho khỏi nhấp nháy
+const pop = (el, from = 0) =>
+  calm.matches ||
+  el.animate(
+    [{ opacity: from, transform: "translateY(4px)" }, { opacity: 1, transform: "none" }],
+    { duration: 350, easing: "cubic-bezier(0.16, 1, 0.3, 1)" }
+  );
+
+function addOpenTab(tab) {
+  const li = openTabRow.cloneNode(true);
+  // Bấm vào dòng → chuyển tới tab đó
+  li.querySelector("button").onclick = () => {
+    chrome.tabs.update(tab.id, { active: true });
+    chrome.windows.update(tab.windowId, { focused: true });
+  };
+  openTabRows.set(tab.id, li);
+  openTabs.append(li);
+  pop(li);
+  return li;
+}
+
+async function showOpenTabs() {
+  // Đang khoá thì không dựng, để danh sách tab không nằm trong DOM
+  const s = rulesView.hidden ? { tabs: [] } : await chrome.runtime.sendMessage({ type: "autoCloseStatus" }).catch(() => null);
+  if (!s) return;
+  for (const [id, li] of openTabRows) {
+    if (s.tabs.some((t) => t.id === id)) continue;
+    li.remove();
+    openTabRows.delete(id);
+  }
+  for (const tab of s.tabs) {
+    const li = openTabRows.get(tab.id) || addOpenTab(tab);
+    const [title, sub, count] = li.querySelectorAll("strong, span, output");
+    const state = !s.limit ? "off" : tab.active ? "active" : "idle";
+    const counting = state === "idle";
+    const left = counting ? Math.max(0, Math.ceil((tab.closesAt - Date.now()) / 1000)) : 0;
+    li.dataset.state = state;
+    li.toggleAttribute("data-urgent", counting && left <= 10);
+    // Vòng tròn: đầy khi đang dùng, vơi dần theo thời gian còn lại, trống khi đang tắt
+    li.style.setProperty("--gone", counting ? 100 - (left * 100000) / s.limit : state === "active" ? 0 : 100);
+    // Tiêu đề tab là tiêu đề ngụy trang, nhiều tab có thể trùng nhau nên kèm tên miền để phân biệt
+    title.textContent = tab.title || tab.url;
+    sub.textContent = `${URL.parse(tab.url)?.hostname.replace(/^www\./, "") || ""} · ${OPEN_TAB_TEXT[state]}`;
+    li.title = tab.url;
+    // 75 → "1:15", 42 → "42s"
+    const text = !counting ? "" : left >= 60 ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}` : `${left}s`;
+    if (count.textContent !== text) {
+      count.textContent = text;
+      if (text) pop(count, 0.5);
+    }
+  }
+}
+showOpenTabs();
+setInterval(showOpenTabs, 1000);
+
+// Khôi phục các tab vừa bị đóng bằng phím tắt hoặc tự đóng
 const restore = document.getElementById("restore");
 chrome.runtime.sendMessage({ type: "closedCount" }).then((count) => {
   if (!count) return;

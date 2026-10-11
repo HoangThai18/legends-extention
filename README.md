@@ -21,6 +21,7 @@ Trong thời đại AI phát triển từng ngày, **học tập** là cách t�
 - **Tab mồi & khôi phục:** đóng tab bằng phím tắt sẽ mở ngay một trang mồi (mặc định Google Docs). Muốn mở lại các tab vừa đóng, bấm **↺ Khôi phục tab vừa đóng** trong popup.
 - **Khoá popup:** danh sách trang trong popup ẩn sẵn, bấm **👁 Hiện danh sách** mới thấy. Đặt **mã PIN** để khoá hẳn: phải nhập đúng mã mới xem/sửa được rule, mở khoá xong tự khoá lại sau 5 phút hoặc khi tắt trình duyệt. Quên mã thì chỉ có cách xoá mã cùng toàn bộ rule và video yêu thích. Mã chỉ lưu dạng băm SHA-256, không lưu mã gốc.
 - **Video yêu thích:** lưu video ngay trong extension thay vì bookmark của trình duyệt. Mở popup, bấm **★ Lưu video này** (dùng được cả khi popup đang khoá): extension lưu tiêu đề thật (kể cả khi tab đang ngụy trang) và mốc thời gian đang xem. Trang đã lưu thì nút hiện **✓ Đã lưu**, mốc thời gian tự cập nhật khi đang xem (mỗi 15 giây), khi dừng video và khi đóng tab. Danh sách nằm ở tab **★ Yêu thích**, bấm tên video để mở lại ở tab mới và tua tới mốc đã lưu. Danh sách được ẩn/khoá bằng mã PIN cùng với danh sách trang. Mốc thời gian chỉ áp cho video dài hơn 60 giây, có tác dụng cả với player nhúng bằng iframe.
+- **Tự đóng tab bỏ quên:** tab ngụy trang nào không được dùng suốt 10 phút thì tự đóng, phòng khi bạn rời máy mà quên tắt. Tab được tính là đang dùng khi nó đang hiện ở cửa sổ bạn đang thao tác, hoặc đang hiện và phát tiếng (xem video không cần động chuột). Chuyển sang tab/ứng dụng khác, rời máy hay khoá màn hình thì bắt đầu đếm. Mục **Tab đang ngụy trang** trong popup liệt kê từng tab đang mở, tab nào đang dùng, tab nào đang đếm ngược và còn bao lâu thì đóng; bấm vào một dòng để chuyển tới tab đó, đổi số phút ở ô **Tự đóng sau** (`0` = tắt). Các tab bị đóng vẫn mở lại được bằng **↺ Khôi phục tab vừa đóng**.
 - **Tự tắt tiếng:** tab ngụy trang tự tắt tiếng khi chuyển sang tab khác, bật lại khi quay về. Tab bạn tự tắt tiếng thì giữ nguyên.
 
 ## Cài đặt
@@ -71,6 +72,7 @@ Cuối `config.js` còn vài tuỳ chọn khác:
 | `DECOY_URL` | Trang mồi mở ra khi đóng tab bằng phím tắt. Bỏ trống = không mở | Google Docs |
 | `AUTO_MUTE` | Tự tắt tiếng tab ngụy trang khi chuyển sang tab khác | `true` |
 | `LOCK_AFTER_MINUTES` | Mở khoá popup bằng mã PIN xong, tự khoá lại sau bấy nhiêu phút | `5` |
+| `AUTO_CLOSE_AFTER_MINUTES` | Số phút mặc định một tab ngụy trang không được dùng thì tự đóng, áp dụng khi chưa chỉnh trong popup. `0` = tắt | `10` |
 
 ### Icon có sẵn
 
@@ -102,7 +104,8 @@ Muốn thêm icon, chép file `.png`, `.ico` hoặc `.svg` vào `icons/` rồi g
 ├── background/
 │   ├── tab-closer.js     # Đóng tab thuộc cấu hình, mở tab mồi
 │   ├── closed-tabs.js    # Nhớ và khôi phục tab vừa đóng
-│   └── auto-mute.js      # Tự tắt/bật tiếng tab
+│   ├── auto-mute.js      # Tự tắt/bật tiếng tab
+│   └── auto-close.js     # Tự đóng tab khi bỏ quên
 ├── ui/
 │   ├── style.css       # CSS dùng chung
 │   └── page-popup/     # Bấm icon extension: ngụy trang nhanh + quản lý rule (lưu trong chrome.storage.local)

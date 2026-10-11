@@ -13,5 +13,22 @@ function createTabCloser({ isTarget, getDecoyUrl, closedTabs }) {
     closedTabs.remember(targets);
   }
 
-  return { closeAll };
+  // Tự đóng các tab bỏ quên. Không tab nào gọi nên chỉ mở tab mồi ở những cửa sổ sắp hết tab
+  async function closeIdle(ids) {
+    const tabs = await chrome.tabs.query({});
+    const targets = tabs.filter((t) => ids.includes(t.id));
+    if (!targets.length) return;
+
+    const decoyUrl = getDecoyUrl();
+    if (decoyUrl) {
+      const kept = new Set(tabs.filter((t) => !targets.includes(t)).map((t) => t.windowId));
+      const emptied = new Set(targets.map((t) => t.windowId).filter((id) => !kept.has(id)));
+      for (const windowId of emptied) chrome.tabs.create({ url: decoyUrl, windowId });
+    }
+    chrome.tabs.remove(targets.map((t) => t.id)).catch(() => {});
+    // Các tab hết giờ lệch nhau nên nhớ nối tiếp, không ghi đè lần trước
+    closedTabs.remember(targets, true);
+  }
+
+  return { closeAll, closeIdle };
 }
