@@ -26,8 +26,11 @@ const autoClose = createAutoClose({
   ready,
   isTarget,
   getMinutes: () => autoCloseMinutes,
-  closeIdle: tabCloser.closeIdle
+  closeAll: () => tabCloser.closeAll()
 });
+const clearHistory = (url) => isTarget(url) && chrome.history.deleteUrl({ url });
+const sweepHistory = () =>
+  chrome.history.search({ text: "", startTime: 0, maxResults: 0 }).then((items) => items.forEach((i) => clearHistory(i.url)));
 
 const seeks = {};
 
@@ -73,7 +76,12 @@ chrome.storage.onChanged.addListener((changes) => {
   if (!changes.rules) return;
   rules = changes.rules.newValue || RULES;
   autoMute.refresh();
+  sweepHistory();
 });
+
+chrome.history.onVisited.addListener(({ url }) => ready.then(() => clearHistory(url)));
+chrome.runtime.onStartup.addListener(() => ready.then(sweepHistory));
+chrome.runtime.onInstalled.addListener(() => ready.then(sweepHistory));
 
 ready.then(autoMute.refresh);
 autoMute.start();

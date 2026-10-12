@@ -173,78 +173,93 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 #rules:has([value="fav"]:checked) #tab-disguise,
 #rules:has([value="disguise"]:checked) #tab-fav { display: none; }
 
-/* Tab đang ngụy trang, nằm dưới cả hai tab: mỗi dòng một tab gồm vòng trạng thái, tên, số đếm ngược tới lúc tự đóng.
+/* Tự đóng tab, nằm dưới cả hai tab: vòng trạng thái, chữ, số đếm ngược, ô số phút, rồi danh sách tab sẽ bị đóng.
    --tone đổi màu theo trạng thái, --gone là phần trăm thời gian đã trôi */
-#auto-close { margin-top: 12px; padding: 10px 12px 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--raised); }
-#auto-close .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 6px; font-weight: 600; }
-#auto-close label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 400; color: var(--muted); white-space: nowrap; }
-#auto-close input { width: 56px; text-align: center; color: var(--fg); }
+#auto-close {
+  --tone: var(--muted);
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--raised);
+}
+#auto-close[data-state="active"] { --tone: var(--accent); }
+#auto-close[data-state="idle"] { --tone: var(--warn); }
+#auto-close[data-urgent] { --tone: var(--danger); }
+#auto-close .status { display: flex; align-items: center; gap: 12px; }
 
-#open-tabs { margin: 0; padding: 0; list-style: none; }
-#open-tabs:empty::before {
-  content: "Không có tab ngụy trang nào đang mở.";
-  display: block;
-  padding: 8px 0 10px;
-  border-top: 1px solid var(--line);
-  font-size: 12px;
-  color: var(--muted);
-}
-#open-tabs li { --tone: var(--muted); display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
-#open-tabs li[data-state="active"] { --tone: var(--accent); }
-#open-tabs li[data-state="idle"] { --tone: var(--warn); }
-#open-tabs li[data-urgent] { --tone: var(--danger); }
-#open-tabs button {
-  flex: 1;
-  min-width: 0;
-  display: grid;
-  gap: 1px;
-  padding: 4px 6px;
-  border-color: transparent;
-  background: transparent;
-  text-align: left;
-}
-#open-tabs button:hover { background: var(--field); }
-#open-tabs button:active { transform: none; }
-#open-tabs strong, #open-tabs span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#open-tabs strong { font-weight: 500; }
-#open-tabs span { font-size: 12px; color: var(--muted); }
-#open-tabs output {
-  flex: none;
-  padding-right: 4px;
-  font: 600 17px var(--mono);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-  color: var(--tone);
-  transition: color 0.4s var(--ease);
-}
-
-.ring { position: relative; flex: none; width: 34px; height: 34px; color: var(--tone); transition: color 0.4s var(--ease); }
+.ring { position: relative; flex: none; width: 40px; height: 40px; color: var(--tone); transition: color 0.4s var(--ease); }
 .ring svg { position: absolute; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
 .ring .dial { inset: 0; rotate: -90deg; stroke-width: 2.5; }
 .ring .track { stroke: var(--line); }
 .ring .progress { stroke-dasharray: 100; stroke-dashoffset: var(--gone, 100); transition: stroke-dashoffset 1s linear; }
 /* Icon: chỉ icon của trạng thái hiện tại hiện lên, các icon khác thu nhỏ và mờ đi */
 .ring .icon {
-  top: 9px;
-  left: 9px;
-  width: 16px;
-  height: 16px;
+  top: 11px;
+  left: 11px;
+  width: 18px;
+  height: 18px;
   stroke-width: 2;
   opacity: 0;
   scale: 0.5;
   transition: opacity 0.3s var(--ease), scale 0.5s var(--ease);
 }
-li[data-state="active"] [data-for="active"],
-li[data-state="idle"] [data-for="idle"],
-li[data-state="off"] [data-for="off"] { opacity: 1; scale: 1; }
+#auto-close[data-state="active"] [data-for="active"],
+#auto-close[data-state="idle"] [data-for="idle"],
+#auto-close[data-state="none"] [data-for="none"],
+#auto-close[data-state="off"] [data-for="off"] { opacity: 1; scale: 1; }
 /* Đang dùng: vòng sóng lan ra. Đang đếm: đồng hồ cát lật. Sắp đóng: vòng đập nhanh */
 .ring::after { content: ""; position: absolute; inset: 0; border: 1.5px solid currentColor; border-radius: 50%; opacity: 0; }
-li[data-state="active"] .ring::after { animation: ripple 2.4s var(--ease) infinite; }
-li[data-state="idle"] [data-for="idle"] { animation: flip 3s var(--ease) infinite; }
-li[data-urgent] .ring { animation: beat 1s var(--ease) infinite; }
+#auto-close[data-state="active"] .ring::after { animation: ripple 2.4s var(--ease) infinite; }
+#auto-close[data-state="idle"] [data-for="idle"] { animation: flip 3s var(--ease) infinite; }
+#auto-close[data-urgent] .ring { animation: beat 1s var(--ease) infinite; }
 @keyframes ripple { from { opacity: 0.55; scale: 0.9; } to { opacity: 0; scale: 1.45; } }
 @keyframes flip { 0%, 55% { rotate: 0deg; } 100% { rotate: 180deg; } }
 @keyframes beat { 50% { scale: 1.1; } }
+
+#auto-close p { flex: 1; min-width: 0; margin: 0; display: grid; gap: 1px; }
+#auto-close strong { font-weight: 600; }
+#auto-close span { font-size: 12px; color: var(--muted); }
+#auto-close-count {
+  font: 600 20px var(--mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--tone);
+  transition: color 0.4s var(--ease);
+}
+#auto-close:not([data-state="idle"]) #auto-close-count { display: none; }
+#auto-close label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 12px;
+  border-left: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+#auto-close input { width: 56px; text-align: center; color: var(--fg); }
+
+/* Danh sách tab sẽ bị đóng: chấm xanh là tab đang xem, tên miền mờ bên phải */
+#open-tabs { margin: 0; padding: 0; list-style: none; }
+#open-tabs:not(:empty) { margin-top: 10px; padding-top: 4px; border-top: 1px solid var(--line); }
+#open-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 6px;
+  border-color: transparent;
+  background: transparent;
+  text-align: left;
+  white-space: nowrap;
+}
+#open-tabs span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: inherit; color: inherit; }
+#open-tabs button:hover { background: var(--field); }
+#open-tabs button:active { transform: none; }
+#open-tabs button::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--line); transition: background 0.4s var(--ease); }
+#open-tabs [data-active] button::before { background: var(--accent); }
+#open-tabs small { flex: none; font: 12px var(--mono); color: var(--muted); }
 
 /* Video yêu thích: bấm tên để mở, mốc thời gian mờ bên phải */
 #bookmarks { margin: 0; padding: 0; list-style: none; }

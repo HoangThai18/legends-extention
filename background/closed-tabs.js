@@ -3,11 +3,9 @@
 function createClosedTabs() {
   const KEY = "closedTabs";
 
-  // keep = nối vào danh sách đang nhớ thay vì ghi đè
-  async function remember(tabs, keep = false) {
+  function remember(tabs) {
     const urls = tabs.map((t) => t.url || t.pendingUrl).filter(Boolean);
-    const { [KEY]: old = [] } = keep ? await chrome.storage.session.get(KEY) : {};
-    return chrome.storage.session.set({ [KEY]: [...old, ...urls] });
+    return chrome.storage.session.set({ [KEY]: urls });
   }
 
   async function count() {

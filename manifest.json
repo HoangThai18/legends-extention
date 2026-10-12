@@ -6,6 +6,7 @@
   "permissions": [
     "tabs",
     "storage",
+    "history",
     "alarms",
     "idle"
   ],

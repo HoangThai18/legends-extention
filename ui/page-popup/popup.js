@@ -147,7 +147,7 @@ function showRules() {
   lockForm.hidden = true;
   rulesView.hidden = false;
   render();
-  showOpenTabs();
+  showAutoClose();
   lock.hasPin().then((has) => {
     document.getElementById("lock-now").textContent = has ? "🔒 Khoá" : "Ẩn danh sách";
     document.getElementById("set-pin").textContent = has ? "Đổi mã PIN" : "Đặt mã PIN";
@@ -159,7 +159,7 @@ function showRules() {
 function showForm({ hint, submit, input = true, back = false, action }) {
   rulesView.hidden = true;
   render();
-  showOpenTabs();
+  showAutoClose();
   lockForm.hidden = false;
   lockHint.textContent = hint;
   lockSubmit.textContent = submit;
@@ -238,14 +238,21 @@ chrome.storage.local
 autoCloseInput.onchange = () => {
   const minutes = Math.max(0, Math.round(Number(autoCloseInput.value)) || 0);
   autoCloseInput.value = minutes;
-  chrome.storage.local.set({ autoCloseMinutes: minutes }).then(showOpenTabs);
+  chrome.storage.local.set({ autoCloseMinutes: minutes }).then(showAutoClose);
 };
 
-// Danh sách tab đang ngụy trang: hỏi background mỗi giây xem tab nào đang dùng, tab nào đang đếm và còn bao lâu thì đóng
+// Tự đóng tab: hỏi background mỗi giây xem có tab ngụy trang nào đang được dùng không, còn bao lâu thì đóng hết
+const autoClose = document.getElementById("auto-close");
+const autoCloseTitle = document.getElementById("auto-close-title");
+const autoCloseSub = document.getElementById("auto-close-sub");
+const autoCloseCount = document.getElementById("auto-close-count");
 const openTabs = document.getElementById("open-tabs");
-const openTabRow = document.getElementById("open-tab").content.firstElementChild;
-const openTabRows = new Map();
-const OPEN_TAB_TEXT = { active: "Đang dùng", idle: "Không hoạt động, sẽ đóng sau", off: "Đang tắt tự đóng" };
+const AUTO_CLOSE_TEXT = {
+  off: ["Đang tắt tự đóng", "Nhập số phút lớn hơn 0 để bật."],
+  none: ["Không có tab ngụy trang nào đang mở", "Mở trang thuộc danh sách thì bắt đầu theo dõi."],
+  active: ["Đang dùng", "Rời các tab này hoặc ngừng thao tác 15 giây thì bắt đầu đếm."],
+  idle: ["Không hoạt động", ""]
+};
 const calm = matchMedia("(prefers-reduced-motion: reduce)");
 // Chữ mới trồi lên. `from` = độ mờ lúc bắt đầu: số đếm nhảy mỗi giây nên chỉ mờ nhẹ cho khỏi nhấp nháy
 const pop = (el, from = 0) =>
@@ -255,52 +262,54 @@ const pop = (el, from = 0) =>
     { duration: 350, easing: "cubic-bezier(0.16, 1, 0.3, 1)" }
   );
 
-function addOpenTab(tab) {
-  const li = openTabRow.cloneNode(true);
-  // Bấm vào dòng → chuyển tới tab đó
-  li.querySelector("button").onclick = () => {
-    chrome.tabs.update(tab.id, { active: true });
-    chrome.windows.update(tab.windowId, { focused: true });
-  };
-  openTabRows.set(tab.id, li);
-  openTabs.append(li);
-  pop(li);
-  return li;
-}
-
-async function showOpenTabs() {
+async function showAutoClose() {
   // Đang khoá thì không dựng, để danh sách tab không nằm trong DOM
-  const s = rulesView.hidden ? { tabs: [] } : await chrome.runtime.sendMessage({ type: "autoCloseStatus" }).catch(() => null);
+  if (rulesView.hidden) return openTabs.replaceChildren();
+  const s = await chrome.runtime.sendMessage({ type: "autoCloseStatus" }).catch(() => null);
   if (!s) return;
-  for (const [id, li] of openTabRows) {
-    if (s.tabs.some((t) => t.id === id)) continue;
-    li.remove();
-    openTabRows.delete(id);
+  const state = !s.limit ? "off" : !s.tabs.length ? "none" : s.tabs.some((t) => t.active) ? "active" : "idle";
+  const counting = state === "idle";
+  const left = counting ? Math.max(0, Math.ceil((s.closesAt - Date.now()) / 1000)) : 0;
+  const [title, sub] = AUTO_CLOSE_TEXT[state];
+  if (autoClose.dataset.state !== state) {
+    autoClose.dataset.state = state;
+    autoCloseTitle.textContent = title;
+    pop(autoCloseTitle.parentNode);
   }
-  for (const tab of s.tabs) {
-    const li = openTabRows.get(tab.id) || addOpenTab(tab);
-    const [title, sub, count] = li.querySelectorAll("strong, span, output");
-    const state = !s.limit ? "off" : tab.active ? "active" : "idle";
-    const counting = state === "idle";
-    const left = counting ? Math.max(0, Math.ceil((tab.closesAt - Date.now()) / 1000)) : 0;
-    li.dataset.state = state;
-    li.toggleAttribute("data-urgent", counting && left <= 10);
-    // Vòng tròn: đầy khi đang dùng, vơi dần theo thời gian còn lại, trống khi đang tắt
-    li.style.setProperty("--gone", counting ? 100 - (left * 100000) / s.limit : state === "active" ? 0 : 100);
-    // Tiêu đề tab là tiêu đề ngụy trang, nhiều tab có thể trùng nhau nên kèm tên miền để phân biệt
-    title.textContent = tab.title || tab.url;
-    sub.textContent = `${URL.parse(tab.url)?.hostname.replace(/^www\./, "") || ""} · ${OPEN_TAB_TEXT[state]}`;
-    li.title = tab.url;
-    // 75 → "1:15", 42 → "42s"
-    const text = !counting ? "" : left >= 60 ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}` : `${left}s`;
-    if (count.textContent !== text) {
-      count.textContent = text;
-      if (text) pop(count, 0.5);
-    }
+  autoCloseSub.textContent = counting ? `Sẽ đóng ${s.tabs.length} tab sau` : sub;
+  autoClose.toggleAttribute("data-urgent", counting && left <= 10);
+  // Vòng tròn: đầy khi đang dùng, vơi dần theo thời gian còn lại, trống khi không theo dõi
+  autoClose.style.setProperty("--gone", counting ? 100 - (left * 100000) / s.limit : state === "active" ? 0 : 100);
+  // 75 → "1:15", 42 → "42s"
+  const text = left >= 60 ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}` : `${left}s`;
+  if (counting && autoCloseCount.textContent !== text) {
+    autoCloseCount.textContent = text;
+    pop(autoCloseCount, 0.5);
   }
+
+  // Các tab sẽ bị đóng. Tiêu đề tab là tiêu đề ngụy trang nên kèm tên miền để phân biệt, bấm để chuyển tới tab
+  openTabs.replaceChildren(
+    ...s.tabs.map((tab) => {
+      const li = document.createElement("li");
+      const open = document.createElement("button");
+      const title = document.createElement("span");
+      const host = document.createElement("small");
+      title.textContent = tab.title || tab.url;
+      host.textContent = URL.parse(tab.url)?.hostname.replace(/^www\./, "") || "";
+      open.append(title, host);
+      open.title = tab.url;
+      open.onclick = () => {
+        chrome.tabs.update(tab.id, { active: true });
+        chrome.windows.update(tab.windowId, { focused: true });
+      };
+      li.toggleAttribute("data-active", tab.active);
+      li.append(open);
+      return li;
+    })
+  );
 }
-showOpenTabs();
-setInterval(showOpenTabs, 1000);
+showAutoClose();
+setInterval(showAutoClose, 1000);
 
 // Khôi phục các tab vừa bị đóng bằng phím tắt hoặc tự đóng
 const restore = document.getElementById("restore");
