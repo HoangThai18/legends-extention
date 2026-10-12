@@ -3,20 +3,31 @@ importScripts(
   "rules.js",
   "background/closed-tabs.js",
   "background/tab-closer.js",
-  "background/auto-mute.js"
+  "background/auto-mute.js",
+  "background/auto-close.js"
 );
 
 let rules = RULES;
 let bookmarks = [];
+let autoCloseMinutes = AUTO_CLOSE_AFTER_MINUTES;
 const ready = Promise.all([
   getRules().then((r) => (rules = r)),
-  chrome.storage.local.get({ bookmarks: [] }).then((s) => (bookmarks = s.bookmarks))
+  chrome.storage.local.get({ bookmarks: [] }).then((s) => (bookmarks = s.bookmarks)),
+  chrome.storage.local
+    .get({ autoCloseMinutes: AUTO_CLOSE_AFTER_MINUTES })
+    .then((s) => (autoCloseMinutes = s.autoCloseMinutes))
 ]);
 
 const isTarget = (url) => findRule(rules, url) !== null;
 const closedTabs = createClosedTabs();
 const tabCloser = createTabCloser({ isTarget, getDecoyUrl: () => DECOY_URL, closedTabs });
 const autoMute = createAutoMute({ isTarget, isEnabled: () => AUTO_MUTE });
+const autoClose = createAutoClose({
+  ready,
+  isTarget,
+  getMinutes: () => autoCloseMinutes,
+  closeAll: () => tabCloser.closeAll()
+});
 const clearHistory = (url) => isTarget(url) && chrome.history.deleteUrl({ url });
 const sweepHistory = () =>
   chrome.history.search({ text: "", startTime: 0, maxResults: 0 }).then((items) => items.forEach((i) => clearHistory(i.url)));
@@ -28,6 +39,7 @@ const HANDLERS = {
   closeAll: (msg, sender) => tabCloser.closeAll(sender.tab),
   closedCount: () => closedTabs.count(),
   restoreClosed: () => closedTabs.restore(),
+  autoCloseStatus: ({ windowId }) => autoClose.check(windowId),
   openBookmark: async ({ url, time }) => {
     const tab = await chrome.tabs.create({ url });
     if (time) seeks[tab.id] = time;
@@ -57,6 +69,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 chrome.storage.onChanged.addListener((changes) => {
   if (changes.bookmarks) bookmarks = changes.bookmarks.newValue || [];
+  if (changes.autoCloseMinutes) {
+    autoCloseMinutes = changes.autoCloseMinutes.newValue ?? AUTO_CLOSE_AFTER_MINUTES;
+    autoClose.refresh();
+  }
   if (!changes.rules) return;
   rules = changes.rules.newValue || RULES;
   autoMute.refresh();
@@ -69,3 +85,4 @@ chrome.runtime.onInstalled.addListener(() => ready.then(sweepHistory));
 
 ready.then(autoMute.refresh);
 autoMute.start();
+autoClose.start();

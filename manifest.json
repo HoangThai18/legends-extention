@@ -6,7 +6,9 @@
   "permissions": [
     "tabs",
     "storage",
-    "history"
+    "history",
+    "alarms",
+    "idle"
   ],
   "content_scripts": [
     {

@@ -39,3 +39,5 @@ const DECOY_URL = "https://docs.google.com/document/u/0/";
 const AUTO_MUTE = true;
 // Mở khoá popup bằng mã PIN xong, tự khoá lại sau bấy nhiêu phút
 const LOCK_AFTER_MINUTES = 5;
+// Không dùng tab ngụy trang nào suốt bấy nhiêu phút → tự đóng hết các tab đó (0 = tắt). Mặc định, chỉnh được trong popup
+const AUTO_CLOSE_AFTER_MINUTES = 10;
