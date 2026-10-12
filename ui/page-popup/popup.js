@@ -265,7 +265,7 @@ const pop = (el, from = 0) =>
 async function showAutoClose() {
   // Đang khoá thì không dựng, để danh sách tab không nằm trong DOM
   if (rulesView.hidden) return openTabs.replaceChildren();
-  const s = await chrome.runtime.sendMessage({ type: "autoCloseStatus" }).catch(() => null);
+  const s = await chrome.runtime.sendMessage({ type: "autoCloseStatus", windowId: currentTab?.windowId }).catch(() => null);
   if (!s) return;
   const state = !s.limit ? "off" : !s.tabs.length ? "none" : s.tabs.some((t) => t.active) ? "active" : "idle";
   const counting = state === "idle";

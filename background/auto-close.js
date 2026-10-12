@@ -11,18 +11,20 @@ function createAutoClose({ ready, isTarget, getMinutes, closeAll }) {
   let queue = Promise.resolve();
   const enabled = () => getMinutes() > 0;
 
-  // Id các tab đang được dùng
-  async function usedIds(targets) {
+  // Id các tab đang được dùng. Popup của extension đang mở thì Chrome báo cửa sổ không còn focus,
+  // nên popup gửi kèm id cửa sổ của nó (popupWindowId) để cửa sổ đó vẫn được tính là đang xem
+  async function usedIds(targets, popupWindowId) {
     const [state, focused] = await Promise.all([
       chrome.idle.queryState(IDLE_SECONDS),
       chrome.windows.getLastFocused().catch(() => null)
     ]);
-    const watching = (tab) => state === "active" && focused?.focused && tab.windowId === focused.id;
+    const inFront = (tab) => tab.windowId === popupWindowId || (focused?.focused && tab.windowId === focused.id);
+    const watching = (tab) => state === "active" && inFront(tab);
     return new Set(targets.filter((t) => t.active && (t.audible || watching(t))).map((t) => t.id));
   }
 
   // Trả về trạng thái cho popup: { limit, tabs, closesAt }. limit = 0 là đang tắt
-  async function run() {
+  async function run(popupWindowId) {
     await ready;
     const limit = enabled() ? getMinutes() * 60000 : 0;
     const all = await chrome.tabs.query({});
@@ -33,7 +35,7 @@ function createAutoClose({ ready, isTarget, getMinutes, closeAll }) {
       return { limit, tabs: [] };
     }
 
-    const using = await usedIds(targets);
+    const using = await usedIds(targets, popupWindowId);
     const now = Date.now();
     let { [KEY]: lastUsed } = await chrome.storage.session.get(KEY);
     if (using.size || !lastUsed) {
@@ -55,8 +57,9 @@ function createAutoClose({ ready, isTarget, getMinutes, closeAll }) {
   }
 
   // Xếp hàng để hai sự kiện đến cùng lúc không cùng đóng tab
-  function check() {
-    return (queue = queue.then(run, run));
+  function check(popupWindowId) {
+    const next = () => run(popupWindowId);
+    return (queue = queue.then(next, next));
   }
 
   // Gọi lại khi đổi số phút: bật thì đặt alarm, tắt thì gỡ
@@ -71,11 +74,11 @@ function createAutoClose({ ready, isTarget, getMinutes, closeAll }) {
     refresh();
     chrome.alarms.onAlarm.addListener((alarm) => alarm.name === ALARM && check());
     // Quay lại tab giữa hai lần alarm vẫn được ghi nhận ngay
-    chrome.tabs.onActivated.addListener(check);
-    chrome.tabs.onRemoved.addListener(check);
-    chrome.windows.onFocusChanged.addListener(check);
+    chrome.tabs.onActivated.addListener(() => check());
+    chrome.tabs.onRemoved.addListener(() => check());
+    chrome.windows.onFocusChanged.addListener(() => check());
     chrome.idle.setDetectionInterval(IDLE_SECONDS);
-    chrome.idle.onStateChanged.addListener(check);
+    chrome.idle.onStateChanged.addListener(() => check());
   }
 
   return { start, refresh, check };
