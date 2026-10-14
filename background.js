@@ -4,7 +4,8 @@ importScripts(
   "background/closed-tabs.js",
   "background/tab-closer.js",
   "background/auto-mute.js",
-  "background/auto-close.js"
+  "background/auto-close.js",
+  "background/grid.js"
 );
 
 let rules = RULES;
@@ -28,6 +29,7 @@ const autoClose = createAutoClose({
   getMinutes: () => autoCloseMinutes,
   closeAll: () => tabCloser.closeAll()
 });
+const grid = createGrid({ isTarget });
 const clearHistory = (url) => isTarget(url) && chrome.history.deleteUrl({ url });
 const sweepHistory = () =>
   chrome.history.search({ text: "", startTime: 0, maxResults: 0 }).then((items) => items.forEach((i) => clearHistory(i.url)));
@@ -40,6 +42,7 @@ const HANDLERS = {
   closedCount: () => closedTabs.count(),
   restoreClosed: () => closedTabs.restore(),
   autoCloseStatus: ({ windowId }) => autoClose.check(windowId),
+  tileGrid: ({ area }) => grid.tile(area),
   openBookmark: async ({ url, time }) => {
     const tab = await chrome.tabs.create({ url });
     if (time) seeks[tab.id] = time;

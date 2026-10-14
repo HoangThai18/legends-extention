@@ -4,10 +4,23 @@
   let saved = false;
   let lastReport = Date.now();
 
+  const mainVideo = () => [...document.querySelectorAll("video")].filter(isMain).sort((a, b) => b.duration - a.duration)[0];
+  const area = (el) => el.offsetWidth * el.offsetHeight;
+
+  function fill() {
+    const video = mainVideo();
+    if (video) video.controls = true;
+    const el = video || (window === top && [...document.querySelectorAll("iframe")].sort((a, b) => area(b) - area(a))[0]);
+    if (!el) return;
+    el.style.cssText +=
+      ";position:fixed!important;inset:0!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;z-index:2147483647!important;background:#000!important";
+  }
+
   chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     if (msg?.type === "track") saved = true;
+    if (msg?.type === "fill") fill();
     if (msg?.type !== "videoTime") return;
-    const video = [...document.querySelectorAll("video")].filter(isMain).sort((a, b) => b.duration - a.duration)[0];
+    const video = mainVideo();
     if (video) reply(Math.floor(video.currentTime));
   });
 

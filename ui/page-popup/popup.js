@@ -124,6 +124,19 @@ Promise.all([
   };
 });
 
+const gridBtn = document.getElementById("grid");
+Promise.all([getRules(), chrome.tabs.query({})]).then(([r, tabs]) => {
+  const count = tabs.filter((t) => findRule(r, t.url || "")).length;
+  if (count < 2) return;
+  gridBtn.textContent = `▦ Xem dạng lưới (${count} tab)`;
+  gridBtn.hidden = false;
+  gridBtn.onclick = () =>
+    chrome.runtime.sendMessage({
+      type: "tileGrid",
+      area: { left: screen.availLeft, top: screen.availTop, width: screen.availWidth, height: screen.availHeight }
+    });
+});
+
 // Lưu trang đang mở vào yêu thích, rồi báo tab bắt đầu tự cập nhật mốc.
 // Tiêu đề lấy từ content script vì tiêu đề tab có thể đang là tiêu đề ngụy trang
 bookmarkBtn.onclick = async () => {
