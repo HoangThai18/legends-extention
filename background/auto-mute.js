@@ -5,9 +5,10 @@ function createAutoMute({ isTarget, isEnabled }) {
   const mutedByUs = (tab) => tab.mutedInfo?.muted && tab.mutedInfo.extensionId === chrome.runtime.id;
 
   async function refresh() {
-    const tabs = await chrome.tabs.query({});
+    const [tabs, focused] = await Promise.all([chrome.tabs.query({}), chrome.windows.getLastFocused().catch(() => null)]);
     for (const tab of tabs) {
-      const shouldMute = isEnabled() && !tab.active && isTarget(tab.url || tab.pendingUrl || "");
+      const watching = tab.active && tab.windowId === focused?.id;
+      const shouldMute = isEnabled() && !watching && isTarget(tab.url || tab.pendingUrl || "");
       if (shouldMute && !tab.mutedInfo?.muted) chrome.tabs.update(tab.id, { muted: true }).catch(() => {});
       else if (!shouldMute && mutedByUs(tab)) chrome.tabs.update(tab.id, { muted: false }).catch(() => {});
     }
@@ -15,6 +16,7 @@ function createAutoMute({ isTarget, isEnabled }) {
 
   function start() {
     chrome.tabs.onActivated.addListener(refresh);
+    chrome.windows.onFocusChanged.addListener(refresh);
     chrome.tabs.onUpdated.addListener((id, change) => {
       if (change.url || change.audible) refresh();
     });
